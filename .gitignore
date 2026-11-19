@@ -1,0 +1,6 @@
+# Backups contain your business data, so keep them out of Git
+marketing-spend-backup-*.json
+*.local.json
+.env
+.DS_Store
+Thumbs.db

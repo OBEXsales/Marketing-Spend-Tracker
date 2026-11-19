@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marketing Spend Tracker</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand">
+      <h1>Marketing Spend Tracker</h1>
+      <span class="sub">Meta Ads · Email (Salesforge + Mailforge)</span>
+    </div>
+    <div class="range" aria-label="Date range">
+      <select id="rangePreset" aria-label="Date range preset">
+        <option value="this-month">This month</option>
+        <option value="last-month">Last month</option>
+        <option value="last-30" selected>Last 30 days</option>
+        <option value="last-90">Last 90 days</option>
+        <option value="this-year">This year</option>
+        <option value="custom">Custom</option>
+      </select>
+      <input type="date" id="rangeFrom" aria-label="From">
+      <span class="dash">–</span>
+      <input type="date" id="rangeTo" aria-label="To">
+    </div>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button role="tab" data-tab="dashboard" class="active">Dashboard</button>
+    <button role="tab" data-tab="meta">Meta Ads</button>
+    <button role="tab" data-tab="email">Email</button>
+    <button role="tab" data-tab="expenses">Expenses</button>
+    <button role="tab" data-tab="settings">Settings</button>
+  </nav>
+
+  <main>
+    <!-- DASHBOARD -->
+    <section id="tab-dashboard" class="tab-panel active">
+      <div class="kpis" id="kpis"></div>
+      <div class="grid-2">
+        <div class="card">
+          <h2>Spend over time</h2>
+          <div class="chart-box"><canvas id="chartSpend"></canvas></div>
+        </div>
+        <div class="card">
+          <h2>Spend by channel</h2>
+          <div class="chart-box small"><canvas id="chartChannel"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <h2>Meta campaigns</h2>
+        <div class="table-wrap"><table id="dashMetaTable" class="sortable"></table></div>
+      </div>
+      <div class="card">
+        <h2>Email sequences</h2>
+        <div class="table-wrap"><table id="dashEmailTable"></table></div>
+      </div>
+    </section>
+
+    <!-- META -->
+    <section id="tab-meta" class="tab-panel">
+      <div class="card">
+        <h2>Sync from Meta</h2>
+        <p class="muted">Pulls daily spend, impressions, clicks, leads and purchases per campaign for the selected date range. Syncing the same days again updates them rather than duplicating.</p>
+        <div class="row">
+          <button id="btnSync" class="primary">Sync selected range</button>
+          <label class="file-btn">Import Ads Manager CSV<input type="file" id="metaCsv" accept=".csv,text/csv" hidden></label>
+          <span id="syncStatus" class="status"></span>
+        </div>
+        <p class="muted small" id="lastSync"></p>
+      </div>
+      <div class="card">
+        <h2>Campaigns in range</h2>
+        <div class="table-wrap"><table id="metaTable" class="sortable"></table></div>
+      </div>
+      <div class="card">
+        <h2>Daily rows in range</h2>
+        <div class="row"><button id="btnClearMetaRange" class="danger ghost">Delete Meta rows in this range</button></div>
+        <div class="table-wrap tall"><table id="metaDailyTable"></table></div>
+      </div>
+    </section>
+
+    <!-- EMAIL -->
+    <section id="tab-email" class="tab-panel">
+      <div class="card">
+        <h2 id="emailFormTitle">Add email sequence</h2>
+        <p class="muted">Copy the numbers from each Salesforge sequence report. Subscription costs (Salesforge, Mailforge, domains) go under <a href="#" data-goto="expenses">Expenses</a> with channel “Email”.</p>
+        <form id="emailForm" class="form-grid">
+          <input type="hidden" name="id">
+          <label class="span-2">Sequence name<input name="name" required placeholder="e.g. SaaS founders – Nov"></label>
+          <label>Start date<input type="date" name="startDate" required></label>
+          <label>End date <span class="hint">(blank = still running)</span><input type="date" name="endDate"></label>
+          <label>Emails sent<input type="number" min="0" name="emailsSent" value="0"></label>
+          <label>Opens<input type="number" min="0" name="opens" value="0"></label>
+          <label>Replies<input type="number" min="0" name="replies" value="0"></label>
+          <label>Positive replies<input type="number" min="0" name="positiveReplies" value="0"></label>
+          <label>Meetings booked<input type="number" min="0" name="meetingsBooked" value="0"></label>
+          <label>Deals won<input type="number" min="0" name="dealsWon" value="0"></label>
+          <label>Revenue<input type="number" min="0" step="0.01" name="revenue" value="0"></label>
+          <div class="form-actions span-2">
+            <button type="submit" class="primary">Save sequence</button>
+            <button type="button" id="emailCancel" class="ghost" hidden>Cancel edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Sequences</h2>
+        <p class="muted small">Cost columns use all Email-channel expenses in the selected date range.</p>
+        <div class="table-wrap"><table id="emailTable"></table></div>
+      </div>
+    </section>
+
+    <!-- EXPENSES -->
+    <section id="tab-expenses" class="tab-panel">
+      <div class="card">
+        <h2 id="expenseFormTitle">Add expense</h2>
+        <p class="muted">Use this for subscriptions (Salesforge, Mailforge), domains, agency or creative fees, and anything else. Meta <em>ad spend</em> comes from the sync, so don't enter it here too.</p>
+        <form id="expenseForm" class="form-grid">
+          <input type="hidden" name="id">
+          <label>Date <span class="hint">(first charge)</span><input type="date" name="date" required></label>
+          <label>Channel
+            <select name="channel">
+              <option>Email</option>
+              <option>Meta</option>
+              <option>Other</option>
+            </select>
+          </label>
+          <label>Vendor<input name="vendor" list="vendorList" placeholder="e.g. Salesforge"></label>
+          <datalist id="vendorList">
+            <option value="Salesforge"></option>
+            <option value="Mailforge"></option>
+            <option value="Domain registrar"></option>
+          </datalist>
+          <label>Amount<input type="number" step="0.01" min="0" name="amount" required></label>
+          <label>Repeats
+            <select name="recurring">
+              <option value="none">One-off</option>
+              <option value="monthly">Monthly</option>
+            </select>
+          </label>
+          <label>Ends <span class="hint">(monthly only, optional)</span><input type="date" name="endDate"></label>
+          <label class="span-2">Description<input name="description" placeholder="e.g. Growth plan, 10 mailboxes"></label>
+          <div class="form-actions span-2">
+            <button type="submit" class="primary">Save expense</button>
+            <button type="button" id="expenseCancel" class="ghost" hidden>Cancel edit</button>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Charges in range</h2>
+        <div class="table-wrap"><table id="chargesTable"></table></div>
+      </div>
+      <div class="card">
+        <h2>All expenses</h2>
+        <div class="table-wrap"><table id="expenseTable"></table></div>
+      </div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tab-panel">
+      <div class="card">
+        <h2>Meta connection</h2>
+        <p class="muted">Stored only in this browser on this computer. Never commit your token to Git. See the README for how to get one.</p>
+        <form id="settingsForm" class="form-grid">
+          <label>Ad Account ID<input name="metaAccountId" placeholder="act_1234567890" autocomplete="off"></label>
+          <label>API version<input name="metaApiVersion" placeholder="v23.0"></label>
+          <label class="span-2">Access token<input type="password" name="metaToken" autocomplete="off" placeholder="Paste token"></label>
+          <label>Currency<input name="currency" maxlength="3" placeholder="USD"></label>
+          <div class="form-actions span-2">
+            <button type="submit" class="primary">Save settings</button>
+            <span id="settingsStatus" class="status"></span>
+          </div>
+        </form>
+      </div>
+      <div class="card">
+        <h2>Backup &amp; restore</h2>
+        <p class="muted">Your data lives in this browser's storage. Download a backup regularly; clearing browser data deletes it. Backups don't include your Meta token.</p>
+        <div class="row">
+          <button id="btnBackup" class="primary">Download backup</button>
+          <label class="file-btn">Restore from backup<input type="file" id="restoreFile" accept=".json,application/json" hidden></label>
+          <button id="btnClearAll" class="danger ghost">Delete all data</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+  <script src="js/store.js"></script>
+  <script src="js/metrics.js"></script>
+  <script src="js/meta.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
